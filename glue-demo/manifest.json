@@ -1,0 +1,6 @@
+{
+    "fileLocations": [{
+        "url": "s3://data-lake-demo-manos/131025_HMRC_Air_Travel_Data_11-12__v1_1.csv"
+    }]
+}
+
