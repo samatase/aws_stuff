@@ -28,8 +28,6 @@ Metadata:
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
 
-
-
 Parameters:
 
 
@@ -114,6 +112,8 @@ Resources:
 
                 - Key: Name
 
+                  Value: Virtual Private Cloud
+                - Key: Environment
                   Value: !Ref EnvironmentName
 
 
@@ -128,6 +128,8 @@ Resources:
 
                 - Key: Name
 
+                  Value: Internet Gateway
+                - Key: Environment
                   Value: !Ref EnvironmentName
 
 
@@ -163,7 +165,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
-
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
     PublicSubnet2:
@@ -185,6 +188,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
 
@@ -207,6 +212,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
 
@@ -229,7 +236,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
-
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
     NatGateway1EIP:
@@ -293,6 +301,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Public Routes
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
 
@@ -351,6 +361,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
 
@@ -393,6 +405,8 @@ Resources:
                 - Key: Name
 
                   Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+                - Key: Environment
+                  Value: !Ref EnvironmentName
 
 
 
@@ -441,7 +455,23 @@ Resources:
 
        Properties:
          BucketName: !Join [ "-", [ !Ref S3DataLakeName, !Ref EnvironmentName ]]
+         BucketEncryption:
+            ServerSideEncryptionConfiguration:
+              - ServerSideEncryptionByDefault:
+                  SSEAlgorithm:  AES256
+         Tags:
+           - Key: Name
+             Value: Data Lake
+           - Key: Environment
+             Value: !Ref EnvironmentName
 
+    GlueDatabase:
+      Type: "AWS::Glue::Database"
+      Properties:
+        DatabaseInput:
+          Name: datalake
+          Description: Database for the Data Lake
+        CatalogId: !Ref AWS::AccountId
 
 Outputs:
 
