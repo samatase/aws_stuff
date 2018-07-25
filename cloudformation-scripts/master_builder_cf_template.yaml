@@ -1,12 +1,8 @@
 
 Description:
 
-    This template deploys the demo data lake for Octatack. Starting from the network, it creates a pair of public and private subnets spread
-
-    across two Availability Zones. It deploys an Internet Gateway, with a default
-
-    route on the public subnets. It deploys a pair of NAT Gateways (one in each AZ),
-
+    This template deploys the demo data lake for Manos Master Builder. Starting from the network, it creates a pair of public and private subnets spread
+    across two Availability Zones. It deploys an Internet Gateway, with a default route on the public subnets. It deploys a pair of NAT Gateways (one in each AZ),
     and default routes for them in the private subnets.
 
 Metadata:
@@ -448,6 +444,26 @@ Resources:
 
             VpcId: !Ref VPC
 
+    InstanceSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: "Allow ssh from anywhere"
+        GroupName: "ssh"
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+
+
+
+
 
     S3DataLake:
 
@@ -465,13 +481,90 @@ Resources:
            - Key: Environment
              Value: !Ref EnvironmentName
 
-    GlueDatabase:
+    RawGlueDatabase:
       Type: "AWS::Glue::Database"
       Properties:
         DatabaseInput:
-          Name: datalake
-          Description: Database for the Data Lake
+          Name: raw-database
+          Description: Raw Data
         CatalogId: !Ref AWS::AccountId
+
+    ProccessedGlueDatabase:
+      Type: "AWS::Glue::Database"
+      Properties:
+        DatabaseInput:
+          Name: processed-database
+          Description: Proccessed Data
+        CatalogId: !Ref AWS::AccountId
+
+    RawTaxiCrawler:
+      Type: "AWS::Glue::Crawler"
+      Properties:
+        Role: !GetAtt CrawlerRole.Arn
+        DatabaseName: !Ref RawGlueDatabase
+        Targets:
+          S3Targets:
+           - Path: !Join [ "/", [ "s3:/" , aws-bigdata-blog/artifacts/glue-data-lake/data/ ] ]
+        Name: Raw Taxi Crawler
+        TablePrefix: taxi-raw-
+
+    RawExamplesCrawler:
+      Type: "AWS::Glue::Crawler"
+      Properties:
+        Role: !GetAtt CrawlerRole.Arn
+        DatabaseName: !Ref RawGlueDatabase
+        Targets:
+          S3Targets:
+           - Path: !Join [ "/", [ "s3:/",awsglue-datasets/examples/ ] ]
+        Name: Raw Examples
+        TablePrefix: raw-examples-
+
+    ProccesedTaxiCrawler:
+      Type: "AWS::Glue::Crawler"
+      Properties:
+        Role: !GetAtt CrawlerRole.Arn
+        DatabaseName: !Ref ProccessedGlueDatabase
+        Targets:
+          S3Targets:
+           - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
+        Name: Proceesed Taxi
+
+
+    CrawlerRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - glue.amazonaws.com
+            Action:
+            - sts:AssumeRole
+        Path: /
+        Policies:
+          - PolicyName: s3allsinglebucket
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+              - Action:
+                - s3:GetObject
+                Resource:
+                - !Join [ "", [ "arn:aws:s3:::", !Ref S3DataLake , "/*" ] ]
+                - "arn:aws:s3:::aws-bigdata-blog/*"
+                - "arn:aws:s3:::awsglue-datasets/*"
+                Effect: Allow
+              - Action:
+                - s3:ListBucket
+                Resource:
+                - !Join [ "", [ "arn:aws:s3:::",!Ref S3DataLake ] ]
+                - "arn:aws:s3:::aws-bigdata-blog/*"
+                - "arn:aws:s3:::awsglue-datasets/*"
+                Effect: Allow
+
 
 Outputs:
 
