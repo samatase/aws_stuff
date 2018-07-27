@@ -16,6 +16,13 @@ Metadata:
          - S3DataLakeName
       -
         Label:
+          default: Database settings
+        Parameters:
+          - RelationalDatabaseName
+          - DBMasterUser
+          - DBMasterPassword
+      -
+        Label:
           default: "Network Configuration"
         Parameters:
           - VpcCIDR
@@ -40,7 +47,23 @@ Parameters:
 
         Type: String
 
+    DBMasterUser:
+      Description: Database admin username
+      Type: String
+      Default: admin
 
+    DBMasterPassword:
+      Description: Database admin password
+      Type: String
+      NoEcho: true
+      MinLength: 8
+      MaxLength: 41
+      ConstraintDescription : must contain only alphanumeric characters with minimum of 8 characters.
+
+    RelationalDatabaseName:
+      Description: Database Name
+      Type: String
+      Default: masterbuilder
 
     VpcCIDR:
 
@@ -103,6 +126,7 @@ Resources:
         Properties:
 
             CidrBlock: !Ref VpcCIDR
+            EnableDnsHostnames: true
 
             Tags:
 
@@ -235,6 +259,14 @@ Resources:
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
+    DBSubnetGroup:
+      Type : AWS::RDS::DBSubnetGroup
+      Properties :
+        DBSubnetGroupDescription : "Subnet available for the RDS DB Instance"
+        DBSubnetGroupName: DB Subnet group
+        SubnetIds:
+            - !Ref PrivateSubnet1
+            - !Ref PrivateSubnet2
 
     NatGateway1EIP:
 
@@ -447,8 +479,8 @@ Resources:
     InstanceSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: "Allow ssh from anywhere"
-        GroupName: "ssh"
+        GroupDescription: "Access to DB via ssh"
+        GroupName: Database-Access
         VpcId: !Ref VPC
         SecurityGroupIngress:
         - IpProtocol: tcp
@@ -457,18 +489,41 @@ Resources:
           CidrIp: 0.0.0.0/0
         SecurityGroupEgress:
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
+          FromPort: '0'
+          ToPort: '65535'
           CidrIp: 0.0.0.0/0
 
+    DBSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: MySQL
+        GroupDescription: Open database for access
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId:
+            !Ref InstanceSecurityGroup
 
+    DBInstance:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        DBName: datalake
+        Engine: MySQL
+        MasterUsername: !Ref DBMasterUser
+        DBInstanceClass: db.t2.small
+        AllocatedStorage: 20
+        MasterUserPassword: !Ref DBMasterPassword
+        DBSubnetGroupName: !Ref DBSubnetGroup
+        AvailabilityZone: !GetAtt PrivateSubnet1.AvailabilityZone
+        VPCSecurityGroups:
+        - !GetAtt DBSecurityGroup.GroupId
 
 
 
     S3DataLake:
-
        Type: AWS::S3::Bucket
-
        Properties:
          BucketName: !Join [ "-", [ !Ref S3DataLakeName, !Ref EnvironmentName ]]
          BucketEncryption:
@@ -529,6 +584,13 @@ Resources:
            - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
         Name: Proceesed Taxi
 
+    GlueEndpoint:
+      Type: AWS::Glue::DevEndpoint
+      Properties:
+        EndpointName: masterbuilderdev
+        PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
+        RoleArn: arn:aws:iam::663817732471:role/GlueMasterBuilder
+
 
     CrawlerRole:
       Type: "AWS::IAM::Role"
@@ -567,7 +629,6 @@ Resources:
 
 
 Outputs:
-
 
 
     VPC:
