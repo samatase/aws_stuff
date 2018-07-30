@@ -555,7 +555,7 @@ Resources:
     RawTaxiCrawler:
       Type: "AWS::Glue::Crawler"
       Properties:
-        Role: !GetAtt CrawlerRole.Arn
+        Role: !GetAtt GlueRole.Arn
         DatabaseName: !Ref RawGlueDatabase
         Targets:
           S3Targets:
@@ -566,7 +566,7 @@ Resources:
     RawExamplesCrawler:
       Type: "AWS::Glue::Crawler"
       Properties:
-        Role: !GetAtt CrawlerRole.Arn
+        Role: !GetAtt GlueRole.Arn
         DatabaseName: !Ref RawGlueDatabase
         Targets:
           S3Targets:
@@ -574,10 +574,10 @@ Resources:
         Name: Raw Examples
         TablePrefix: raw-examples-
 
-    ProccesedTaxiCrawler:
+    ProcessedDataCrawler:
       Type: "AWS::Glue::Crawler"
       Properties:
-        Role: !GetAtt CrawlerRole.Arn
+        Role: !GetAtt GlueRole.Arn
         DatabaseName: !Ref ProccessedGlueDatabase
         Targets:
           S3Targets:
@@ -589,14 +589,16 @@ Resources:
       Properties:
         EndpointName: masterbuilderdev
         PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
-        RoleArn: arn:aws:iam::663817732471:role/GlueMasterBuilder
+        RoleArn: !GetAtt GlueRole.Arn
 
 
-    CrawlerRole:
+    GlueRole:
       Type: "AWS::IAM::Role"
       Properties:
         ManagedPolicyArns:
           - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+          - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+          - arn:aws:iam::aws:policy/AmazonS3FullAccess
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
