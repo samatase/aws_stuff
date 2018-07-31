@@ -18,7 +18,10 @@ raw_db = "raw-database"
 table_persons = "raw-examples-persons_json"
 table_memberships = "raw-examples-memberships_json"
 table_organization = "raw-examples-organizations_json"
-datalake_bucket = "datalake-master-builder-demo"
+datalake_name = "datalake-master-builder-demo"
+environment = "dev"
+datalake_bucket = datalake_name + "-" + environment
+
 
 persons = glueContext.create_dynamic_frame.from_catalog(database=raw_db, table_name=table_persons)
 memberships = glueContext.create_dynamic_frame.from_catalog(database=raw_db, table_name=table_memberships)
@@ -30,8 +33,8 @@ orgs = orgs.drop_fields(['other_names', 'identifiers']).rename_field('id', 'org_
 
 #write tables to parquet files
 print "Writing processed data to /legislators ..."
-glueContext.write_dynamic_frame.from_options(frame = orgs, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "datalake/legislators-processed"}, format = "parquet")
-glueContext.write_dynamic_frame.from_options(frame = memberships, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "datalake/legislators-processed"}, format = "parquet")
-glueContext.write_dynamic_frame.from_options(frame = persons, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "datalake/legislators-processed"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = orgs, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = memberships, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = persons, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
 
 job.commit()
