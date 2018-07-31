@@ -32,20 +32,15 @@ Metadata:
           - PrivateSubnet2CIDR
 
 Parameters:
-
-
-
     EnvironmentName:
-
         Description: An environment name that will be prefixed to resource names
-
         Type: String
+        Default: dev
 
     S3DataLakeName:
-
         Description: The name of the S3 bucket of the Data Lake
-
         Type: String
+        Default: datalake-master-builder-demo
 
     DBMasterUser:
       Description: Database admin username
@@ -63,198 +58,109 @@ Parameters:
     RelationalDatabaseName:
       Description: Database Name
       Type: String
-      Default: masterbuilder
+      Default: datalake
 
     VpcCIDR:
-
         Description: Please enter the IP range (CIDR notation) for this VPC
-
         Type: String
-
         Default: 10.0.0.0/16
 
-
-
     PublicSubnet1CIDR:
-
         Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
-
         Type: String
-
         Default: 10.0.1.0/24
 
-
-
     PublicSubnet2CIDR:
-
         Description: Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone
-
         Type: String
-
         Default: 10.0.2.0/24
 
-
-
     PrivateSubnet1CIDR:
-
         Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
-
         Type: String
-
         Default: 10.0.3.0/24
 
-
-
     PrivateSubnet2CIDR:
-
         Description: Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone
-
         Type: String
-
         Default: 10.0.4.0/24
-
-
 
 Resources:
 
-
-
     VPC:
-
         Type: AWS::EC2::VPC
-
         Properties:
-
             CidrBlock: !Ref VpcCIDR
             EnableDnsHostnames: true
-
             Tags:
-
                 - Key: Name
-
                   Value: Virtual Private Cloud
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     InternetGateway:
-
         Type: AWS::EC2::InternetGateway
-
         Properties:
-
             Tags:
-
                 - Key: Name
-
                   Value: Internet Gateway
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     InternetGatewayAttachment:
-
         Type: AWS::EC2::VPCGatewayAttachment
-
         Properties:
-
             InternetGatewayId: !Ref InternetGateway
-
             VpcId: !Ref VPC
-
-
 
     PublicSubnet1:
-
         Type: AWS::EC2::Subnet
-
         Properties:
-
             VpcId: !Ref VPC
-
             AvailabilityZone: !Select [ 0, !GetAZs '' ]
-
             CidrBlock: !Ref PublicSubnet1CIDR
-
             MapPublicIpOnLaunch: true
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
     PublicSubnet2:
-
         Type: AWS::EC2::Subnet
-
         Properties:
-
             VpcId: !Ref VPC
-
             AvailabilityZone: !Select [ 1, !GetAZs '' ]
-
             CidrBlock: !Ref PublicSubnet2CIDR
-
             MapPublicIpOnLaunch: true
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     PrivateSubnet1:
-
         Type: AWS::EC2::Subnet
-
         Properties:
-
             VpcId: !Ref VPC
-
             AvailabilityZone: !Select [ 0, !GetAZs '' ]
-
             CidrBlock: !Ref PrivateSubnet1CIDR
-
             MapPublicIpOnLaunch: false
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     PrivateSubnet2:
-
         Type: AWS::EC2::Subnet
-
         Properties:
-
             VpcId: !Ref VPC
-
             AvailabilityZone: !Select [ 1, !GetAZs '' ]
-
             CidrBlock: !Ref PrivateSubnet2CIDR
-
             MapPublicIpOnLaunch: false
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
@@ -269,211 +175,110 @@ Resources:
             - !Ref PrivateSubnet2
 
     NatGateway1EIP:
-
         Type: AWS::EC2::EIP
-
         DependsOn: InternetGatewayAttachment
-
         Properties:
-
             Domain: vpc
-
-
 
     NatGateway2EIP:
-
         Type: AWS::EC2::EIP
-
         DependsOn: InternetGatewayAttachment
-
         Properties:
-
             Domain: vpc
 
-
-
     NatGateway1:
-
         Type: AWS::EC2::NatGateway
-
         Properties:
-
             AllocationId: !GetAtt NatGateway1EIP.AllocationId
-
             SubnetId: !Ref PublicSubnet1
 
-
-
     NatGateway2:
-
         Type: AWS::EC2::NatGateway
-
         Properties:
-
             AllocationId: !GetAtt NatGateway2EIP.AllocationId
-
             SubnetId: !Ref PublicSubnet2
 
-
-
     PublicRouteTable:
-
         Type: AWS::EC2::RouteTable
-
         Properties:
-
             VpcId: !Ref VPC
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Public Routes
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     DefaultPublicRoute:
-
         Type: AWS::EC2::Route
-
         DependsOn: InternetGatewayAttachment
-
         Properties:
-
             RouteTableId: !Ref PublicRouteTable
-
             DestinationCidrBlock: 0.0.0.0/0
-
             GatewayId: !Ref InternetGateway
 
-
-
     PublicSubnet1RouteTableAssociation:
-
         Type: AWS::EC2::SubnetRouteTableAssociation
-
         Properties:
-
             RouteTableId: !Ref PublicRouteTable
-
             SubnetId: !Ref PublicSubnet1
 
-
-
     PublicSubnet2RouteTableAssociation:
-
         Type: AWS::EC2::SubnetRouteTableAssociation
-
         Properties:
-
             RouteTableId: !Ref PublicRouteTable
-
             SubnetId: !Ref PublicSubnet2
 
-
-
-
-
     PrivateRouteTable1:
-
         Type: AWS::EC2::RouteTable
-
         Properties:
-
             VpcId: !Ref VPC
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Private Routes (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     DefaultPrivateRoute1:
-
         Type: AWS::EC2::Route
-
         Properties:
-
             RouteTableId: !Ref PrivateRouteTable1
-
             DestinationCidrBlock: 0.0.0.0/0
-
             NatGatewayId: !Ref NatGateway1
 
-
-
     PrivateSubnet1RouteTableAssociation:
-
         Type: AWS::EC2::SubnetRouteTableAssociation
-
         Properties:
-
             RouteTableId: !Ref PrivateRouteTable1
-
             SubnetId: !Ref PrivateSubnet1
 
-
-
     PrivateRouteTable2:
-
         Type: AWS::EC2::RouteTable
-
         Properties:
-
             VpcId: !Ref VPC
-
             Tags:
-
                 - Key: Name
-
                   Value: !Sub ${EnvironmentName} Private Routes (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
-
-
     DefaultPrivateRoute2:
-
         Type: AWS::EC2::Route
-
         Properties:
-
             RouteTableId: !Ref PrivateRouteTable2
-
             DestinationCidrBlock: 0.0.0.0/0
-
             NatGatewayId: !Ref NatGateway2
 
-
-
     PrivateSubnet2RouteTableAssociation:
-
         Type: AWS::EC2::SubnetRouteTableAssociation
-
         Properties:
-
             RouteTableId: !Ref PrivateRouteTable2
-
             SubnetId: !Ref PrivateSubnet2
 
-
-
     NoIngressSecurityGroup:
-
         Type: AWS::EC2::SecurityGroup
-
         Properties:
-
             GroupName: "no-ingress-sg"
-
             GroupDescription: "Security group with no ingress rule"
-
             VpcId: !Ref VPC
 
     InstanceSecurityGroup:
@@ -503,13 +308,29 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
-          SourceSecurityGroupId:
-            !Ref InstanceSecurityGroup
+          SourceSecurityGroupId: !Ref InstanceSecurityGroup
+        SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: '0'
+          ToPort: '65535'
+          CidrIp: 0.0.0.0/0
+
+
+    # Self referenced security group for Glue to connect to RDS in private Endpoint
+    DBSecurityGroupIngress:
+      Type: AWS::EC2::SecurityGroupIngress
+      DependsOn: DBSecurityGroup
+      Properties:
+        GroupId: !Ref DBSecurityGroup
+        IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        SourceSecurityGroupId: !Ref DBSecurityGroup
 
     DBInstance:
       Type: AWS::RDS::DBInstance
       Properties:
-        DBName: datalake
+        DBName: !Ref RelationalDatabaseName
         Engine: MySQL
         MasterUsername: !Ref DBMasterUser
         DBInstanceClass: db.t2.small
@@ -519,8 +340,6 @@ Resources:
         AvailabilityZone: !GetAtt PrivateSubnet1.AvailabilityZone
         VPCSecurityGroups:
         - !GetAtt DBSecurityGroup.GroupId
-
-
 
     S3DataLake:
        Type: AWS::S3::Bucket
@@ -583,14 +402,33 @@ Resources:
           S3Targets:
            - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
         Name: Proceesed Taxi
+    #
+    # GlueEndpoint:
+    #   Type: AWS::Glue::DevEndpoint
+    #   Properties:
+    #     EndpointName: masterbuilderdev
+    #     PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
+    #     RoleArn: !GetAtt GlueRole.Arn
 
-    GlueEndpoint:
-      Type: AWS::Glue::DevEndpoint
+    GlueConnection:
+      Type: AWS::Glue::Connection
       Properties:
-        EndpointName: masterbuilderdev
-        PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
-        RoleArn: !GetAtt GlueRole.Arn
-
+          ConnectionInput:
+              Description: Connection to RDS
+              ConnectionType: JDBC
+              # MatchCriteria: none
+              PhysicalConnectionRequirements:
+                    AvailabilityZone: !GetAtt PrivateSubnet1.AvailabilityZone
+                    SecurityGroupIdList:
+                      - !Ref DBSecurityGroup
+                    SubnetId: !Ref PrivateSubnet1
+              ConnectionProperties: {
+                "JDBC_CONNECTION_URL": !Join [ "" , [ "jdbc:mysql://" , !GetAtt DBInstance.Endpoint.Address , ":" , !GetAtt DBInstance.Endpoint.Port, / , !Ref RelationalDatabaseName  ] ],
+                "USERNAME": !Ref DBMasterUser,
+                "PASSWORD": !Ref DBMasterPassword
+              }
+              Name: RDS
+          CatalogId: !Ref AWS::AccountId
 
     GlueRole:
       Type: "AWS::IAM::Role"
@@ -629,68 +467,36 @@ Resources:
                 - "arn:aws:s3:::awsglue-datasets/*"
                 Effect: Allow
 
-
 Outputs:
 
-
     VPC:
-
         Description: A reference to the created VPC
-
         Value: !Ref VPC
 
-
-
     PublicSubnets:
-
         Description: A list of the public subnets
-
         Value: !Join [ ",", [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]]
 
-
-
     PrivateSubnets:
-
         Description: A list of the private subnets
-
         Value: !Join [ ",", [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]]
 
-
-
     PublicSubnet1:
-
         Description: A reference to the public subnet in the 1st Availability Zone
-
         Value: !Ref PublicSubnet1
 
-
-
     PublicSubnet2:
-
         Description: A reference to the public subnet in the 2nd Availability Zone
-
         Value: !Ref PublicSubnet2
 
-
-
     PrivateSubnet1:
-
         Description: A reference to the private subnet in the 1st Availability Zone
-
         Value: !Ref PrivateSubnet1
 
-
-
     PrivateSubnet2:
-
         Description: A reference to the private subnet in the 2nd Availability Zone
-
         Value: !Ref PrivateSubnet2
 
-
-
     NoIngressSecurityGroup:
-
         Description: Security group with no ingress rule
-
         Value: !Ref NoIngressSecurityGroup
