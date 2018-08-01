@@ -58,7 +58,7 @@ Parameters:
     RelationalDatabaseName:
       Description: Database Name
       Type: String
-      Default: datalake
+      Default: octank
 
     VpcCIDR:
         Description: Please enter the IP range (CIDR notation) for this VPC
@@ -284,13 +284,21 @@ Resources:
     InstanceSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: "Access to DB via ssh"
-        GroupName: Database-Access
+        GroupDescription: "Notebook security group"
+        GroupName: Jypiter-Notebook
         VpcId: !Ref VPC
         SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
           CidrIp: 0.0.0.0/0
         SecurityGroupEgress:
         - IpProtocol: tcp
@@ -333,11 +341,11 @@ Resources:
         DBName: !Ref RelationalDatabaseName
         Engine: MySQL
         MasterUsername: !Ref DBMasterUser
+        MultiAZ: true
         DBInstanceClass: db.t2.small
         AllocatedStorage: 20
         MasterUserPassword: !Ref DBMasterPassword
         DBSubnetGroupName: !Ref DBSubnetGroup
-        AvailabilityZone: !GetAtt PrivateSubnet1.AvailabilityZone
         VPCSecurityGroups:
         - !GetAtt DBSecurityGroup.GroupId
 
@@ -359,16 +367,32 @@ Resources:
       Type: "AWS::Glue::Database"
       Properties:
         DatabaseInput:
-          Name: raw-database
-          Description: Raw Data
+          Name: datalake-raw
+          Description: Raw data as they arrive in the Octank Datalake
+        CatalogId: !Ref AWS::AccountId
+
+    RDSGlueDatabase:
+      Type: "AWS::Glue::Database"
+      Properties:
+        DatabaseInput:
+          Name: rds
+          Description: Relational Database
         CatalogId: !Ref AWS::AccountId
 
     ProccessedGlueDatabase:
       Type: "AWS::Glue::Database"
       Properties:
         DatabaseInput:
-          Name: processed-database
-          Description: Proccessed Data
+          Name: datalake-processed
+          Description: Proccessed Data in the Octank Datalake
+        CatalogId: !Ref AWS::AccountId
+
+    RedshiftDataWarehouseGlueDatabase:
+      Type: "AWS::Glue::Database"
+      Properties:
+        DatabaseInput:
+          Name: redshift
+          Description: The Data Warehouse of Octatank
         CatalogId: !Ref AWS::AccountId
 
     RawTaxiCrawler:
@@ -402,13 +426,13 @@ Resources:
           S3Targets:
            - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
         Name: Proceesed Taxi
-    #
-    # GlueEndpoint:
-    #   Type: AWS::Glue::DevEndpoint
-    #   Properties:
-    #     EndpointName: masterbuilderdev
-    #     PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
-    #     RoleArn: !GetAtt GlueRole.Arn
+
+    GlueEndpoint:
+      Type: AWS::Glue::DevEndpoint
+      Properties:
+        EndpointName: masterbuilderdev
+        PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
+        RoleArn: !GetAtt GlueRole.Arn
 
     GlueConnection:
       Type: AWS::Glue::Connection
@@ -466,6 +490,26 @@ Resources:
                 - "arn:aws:s3:::aws-bigdata-blog/*"
                 - "arn:aws:s3:::awsglue-datasets/*"
                 Effect: Allow
+
+    DBManagementInstance:
+      Type: AWS::EC2::Instance
+      Properties:
+        ImageId: "ami-466768ac"
+        KeyName: "manos"
+        SubnetId: !Ref PublicSubnet1
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+        Tags:
+          - Key: Name
+            Value: DB Management Instance
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash -xe
+            yum update -y
+            yum install mysql -y
+            yum install postgresql -y
+            service httpd start
+
 
 Outputs:
 
