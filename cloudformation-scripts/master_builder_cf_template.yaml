@@ -1,9 +1,9 @@
 
 Description:
 
-    This template deploys the demo data lake for Manos Master Builder. Starting from the network, it creates a pair of public and private subnets spread
+    This template deploys the demo data lake for Octank Analytics. Starting from the network, it creates a pair of public and private subnets spread
     across two Availability Zones. It deploys an Internet Gateway, with a default route on the public subnets. It deploys a pair of NAT Gateways (one in each AZ),
-    and default routes for them in the private subnets.
+    and default routes for them in the private subnets. It creates an RDS instance and a Redshift Cluster
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -16,11 +16,14 @@ Metadata:
          - S3DataLakeName
       -
         Label:
-          default: Database settings
+          default: Datastores settings
         Parameters:
           - RelationalDatabaseName
           - DBMasterUser
           - DBMasterPassword
+          - RedshiftDatabaseName
+          - RedshiftMasterUser
+          - RedshiftMasterPassword
       -
         Label:
           default: "Network Configuration"
@@ -42,6 +45,11 @@ Parameters:
         Type: String
         Default: datalake-master-builder-demo
 
+    RelationalDatabaseName:
+      Description: Database Name
+      Type: String
+      Default: octank
+
     DBMasterUser:
       Description: Database admin username
       Type: String
@@ -55,10 +63,25 @@ Parameters:
       MaxLength: 41
       ConstraintDescription : must contain only alphanumeric characters with minimum of 8 characters.
 
-    RelationalDatabaseName:
-      Description: Database Name
+    RedshiftDatabaseName:
+      Description: Redshift Database Name
       Type: String
       Default: octank
+
+    RedshiftMasterUser:
+      Description: Redshift master username
+      Type: String
+      Default: admin
+
+    RedshiftMasterPassword:
+      Description: Redshift master user password
+      Type: String
+      NoEcho: true
+      MinLength: 8
+      MaxLength: 41
+      ConstraintDescription : must contain only alphanumeric characters with minimum of 8 characters.
+
+
 
     VpcCIDR:
         Description: Please enter the IP range (CIDR notation) for this VPC
@@ -122,7 +145,7 @@ Resources:
             MapPublicIpOnLaunch: true
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
+                  Value: Public Subnet (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -135,7 +158,7 @@ Resources:
             MapPublicIpOnLaunch: true
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
+                  Value: Public Subnet (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -148,7 +171,7 @@ Resources:
             MapPublicIpOnLaunch: false
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
+                  Value: Private Subnet (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -161,7 +184,7 @@ Resources:
             MapPublicIpOnLaunch: false
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
+                  Value: Private Subnet (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -169,10 +192,17 @@ Resources:
       Type : AWS::RDS::DBSubnetGroup
       Properties :
         DBSubnetGroupDescription : "Subnet available for the RDS DB Instance"
-        DBSubnetGroupName: DB Subnet group
+        DBSubnetGroupName: DB Subnet Group
         SubnetIds:
             - !Ref PrivateSubnet1
             - !Ref PrivateSubnet2
+
+    RedshiftSubnetGroup:
+      Type: AWS::Redshift::ClusterSubnetGroup
+      Properties:
+        Description: Cluster subnet group
+        SubnetIds:
+            - !Ref PublicSubnet1
 
     NatGateway1EIP:
         Type: AWS::EC2::EIP
@@ -204,7 +234,7 @@ Resources:
             VpcId: !Ref VPC
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Public Routes
+                  Value: Public Routes
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -234,7 +264,7 @@ Resources:
             VpcId: !Ref VPC
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+                  Value: Private Routes (AZ1)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -257,7 +287,7 @@ Resources:
             VpcId: !Ref VPC
             Tags:
                 - Key: Name
-                  Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+                  Value: Private Routes (AZ2)
                 - Key: Environment
                   Value: !Ref EnvironmentName
 
@@ -323,8 +353,29 @@ Resources:
           ToPort: '65535'
           CidrIp: 0.0.0.0/0
 
+    # Added Quicksight IP to restrict access to quicksight only
+    RedshiftSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName: Redshift
+        GroupDescription: Open database for access
+        VpcId: !Ref VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5439'
+          ToPort: '5439'
+          SourceSecurityGroupId: !Ref InstanceSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '5439'
+          ToPort: '5439'
+          CidrIp: 52.210.255.224/27
+        SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: '0'
+          ToPort: '65535'
+          CidrIp: 0.0.0.0/0
 
-    # Self referenced security group for Glue to connect to RDS in private Endpoint
+    # Self referenced security group for Glue to connect to RDS in private subnet
     DBSecurityGroupIngress:
       Type: AWS::EC2::SecurityGroupIngress
       DependsOn: DBSecurityGroup
@@ -334,6 +385,17 @@ Resources:
         FromPort: '0'
         ToPort: '65535'
         SourceSecurityGroupId: !Ref DBSecurityGroup
+
+    # Self referenced security group for Glue to connect to Redshift in private subnet
+    RedshiftSecurityGroupIngress:
+      Type: AWS::EC2::SecurityGroupIngress
+      DependsOn: DBSecurityGroup
+      Properties:
+        GroupId: !Ref RedshiftSecurityGroup
+        IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        SourceSecurityGroupId: !Ref RedshiftSecurityGroup
 
     DBInstance:
       Type: AWS::RDS::DBInstance
@@ -348,11 +410,30 @@ Resources:
         DBSubnetGroupName: !Ref DBSubnetGroup
         VPCSecurityGroups:
         - !GetAtt DBSecurityGroup.GroupId
+        Tags:
+          - Key: Name
+            Value: Production Database
+
+
+    RedshiftCluster:
+      Type: "AWS::Redshift::Cluster"
+      Properties:
+        DBName: !Ref RedshiftDatabaseName
+        MasterUsername: !Ref RedshiftMasterUser
+        MasterUserPassword: !Ref RedshiftMasterPassword
+        NodeType: "ds2.xlarge"
+        ClusterType: "single-node"
+        ClusterSubnetGroupName: !Ref RedshiftSubnetGroup
+        VpcSecurityGroupIds:
+          - !GetAtt RedshiftSecurityGroup.GroupId
+        Tags:
+          - Key: Name
+            Value: Redshift Data Warehouse
 
     S3DataLake:
        Type: AWS::S3::Bucket
        Properties:
-         BucketName: !Join [ "-", [ !Ref S3DataLakeName, !Ref EnvironmentName ]]
+         BucketName: !Ref S3DataLakeName
          BucketEncryption:
             ServerSideEncryptionConfiguration:
               - ServerSideEncryptionByDefault:
@@ -427,12 +508,12 @@ Resources:
            - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
         Name: Proceesed Taxi
 
-    GlueEndpoint:
-      Type: AWS::Glue::DevEndpoint
-      Properties:
-        EndpointName: masterbuilderdev
-        PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
-        RoleArn: !GetAtt GlueRole.Arn
+    # GlueEndpoint:
+    #   Type: AWS::Glue::DevEndpoint
+    #   Properties:
+    #     EndpointName: masterbuilderdev
+    #     PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
+    #     RoleArn: !GetAtt GlueRole.Arn
 
     GlueConnection:
       Type: AWS::Glue::Connection
@@ -461,6 +542,7 @@ Resources:
           - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
           - arn:aws:iam::aws:policy/AmazonRDSFullAccess
           - arn:aws:iam::aws:policy/AmazonS3FullAccess
+          - arn:aws:iam::aws:policy/AmazonRedshiftFullAccess
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -540,7 +622,3 @@ Outputs:
     PrivateSubnet2:
         Description: A reference to the private subnet in the 2nd Availability Zone
         Value: !Ref PrivateSubnet2
-
-    NoIngressSecurityGroup:
-        Description: Security group with no ingress rule
-        Value: !Ref NoIngressSecurityGroup
