@@ -14,7 +14,7 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 ## @type: DataSource
-## @args: [database = "raw-database", table_name = "taxi-raw-data", transformation_ctx = "datasource0"]
+## @args: [database = "datalake-raw", table_name = "taxi-raw-data", transformation_ctx = "datasource0"]
 ## @return: datasource0
 ## @inputs: []
 datasource0 = glueContext.create_dynamic_frame.from_catalog(database = "datalake-raw", table_name = "taxi-raw-data", transformation_ctx = "datasource0")
@@ -34,8 +34,8 @@ resolvechoice2 = ResolveChoice.apply(frame = applymapping1, choice = "make_cols"
 ## @inputs: [frame = resolvechoice2]
 dropnullfields3 = DropNullFields.apply(frame = resolvechoice2, transformation_ctx = "dropnullfields3")
 ## @type: DataSink
-## @args: [catalog_connection = "RDS", connection_options = {"dbtable": "taxi-raw-data", "database": "datalake"}, transformation_ctx = "datasink4"]
+## @args: [catalog_connection = "RDS", connection_options = {"dbtable": "taxi-raw-data", "database": "octank"}, transformation_ctx = "datasink4"]
 ## @return: datasink4
 ## @inputs: [frame = dropnullfields3]
-datasink4 = glueContext.write_dynamic_frame.from_jdbc_conf(frame = dropnullfields3, catalog_connection = "RDS", connection_options = {"dbtable": "taxi_transactions", "database": "octank"}, transformation_ctx = "datasink4")
+datasink4 = glueContext.write_dynamic_frame.from_jdbc_conf(frame = dropnullfields3, catalog_connection = "RDS", connection_options = {"dbtable": "trips", "database": "octank"}, transformation_ctx = "datasink4")
 job.commit()

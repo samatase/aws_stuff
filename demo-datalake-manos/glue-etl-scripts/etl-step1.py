@@ -33,8 +33,8 @@ orgs = orgs.drop_fields(['other_names', 'identifiers']).rename_field('id', 'org_
 
 #write tables to parquet files
 print "Writing processed data to /legislators ..."
-glueContext.write_dynamic_frame.from_options(frame = orgs, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
-glueContext.write_dynamic_frame.from_options(frame = memberships, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
-glueContext.write_dynamic_frame.from_options(frame = persons, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = orgs, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed/orgs"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = memberships, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed/members"}, format = "parquet")
+glueContext.write_dynamic_frame.from_options(frame = persons, connection_type = "s3", connection_options = {"path": "s3://" + datalake_bucket + "/datalake/legislators-processed/persons"}, format = "parquet")
 
 job.commit()
