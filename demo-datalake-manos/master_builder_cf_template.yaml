@@ -309,6 +309,8 @@ Resources:
       Properties:
         RouteTableIds:
           - !Ref PublicRouteTable
+          - !Ref PrivateRouteTable1
+          - !Ref PrivateRouteTable2
         ServiceName: !Join
           - ''
           - - com.amazonaws.
@@ -406,10 +408,11 @@ Resources:
       Type: AWS::RDS::DBInstance
       Properties:
         DBName: !Ref RelationalDatabaseName
+        BackupRetentionPeriod: 0
         Engine: MySQL
         MasterUsername: !Ref DBMasterUser
-        MultiAZ: true
-        DBInstanceClass: db.t2.small
+        AvailabilityZone: !GetAtt PrivateSubnet1.AvailabilityZone
+        DBInstanceClass: db.m3.large
         AllocatedStorage: 20
         MasterUserPassword: !Ref DBMasterPassword
         DBSubnetGroupName: !Ref DBSubnetGroup
@@ -489,7 +492,7 @@ Resources:
         Targets:
           S3Targets:
            - Path: !Join [ "/", [ "s3:/" , aws-bigdata-blog/artifacts/glue-data-lake/data/ ] ]
-        Name: Raw Taxi Crawler
+        Name: AWS Taxi Dataset Crawler
         TablePrefix: taxi-raw-
 
     RawExamplesCrawler:
@@ -500,8 +503,7 @@ Resources:
         Targets:
           S3Targets:
            - Path: !Join [ "/", [ "s3:/",awsglue-datasets/examples/ ] ]
-        Name: Raw Examples
-        TablePrefix: raw-examples-
+        Name: AWS Glue Dataset Crawler
 
     ProcessedDataCrawler:
       Type: "AWS::Glue::Crawler"
@@ -510,8 +512,18 @@ Resources:
         DatabaseName: !Ref ProccessedGlueDatabase
         Targets:
           S3Targets:
-           - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , datalake/ ] ]
-        Name: Proceesed Taxi
+           - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , processed/ ] ]
+        Name: Proceesed Datalake Crawler
+
+    RawDataCrawler:
+      Type: "AWS::Glue::Crawler"
+      Properties:
+        Role: !GetAtt GlueRole.Arn
+        DatabaseName: !Ref RawGlueDatabase
+        Targets:
+          S3Targets:
+           - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , raw/ ] ]
+        Name: Raw Datalake Crawler
 
     # GlueEndpoint:
     #   Type: AWS::Glue::DevEndpoint
@@ -619,7 +631,8 @@ Resources:
         Command:
           Name: glueetl
           ScriptLocation: !Join [ "/", [ "s3:/", "manos-glue-development-scripts" , "0-load-taxi-data-to-rds.py" ] ]
-        Name: load-rds-test-taxi--trips-data
+        Name: LoadRds
+
 
     DBManagementInstance:
       Type: AWS::EC2::Instance
