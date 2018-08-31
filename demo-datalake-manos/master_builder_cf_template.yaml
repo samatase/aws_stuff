@@ -525,12 +525,12 @@ Resources:
            - Path: !Join [ "/", [ "s3:/",!Ref S3DataLake , raw/ ] ]
         Name: Raw Datalake Crawler
 
-    # GlueEndpoint:
-    #   Type: AWS::Glue::DevEndpoint
-    #   Properties:
-    #     EndpointName: masterbuilderdev
-    #     PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
-    #     RoleArn: !GetAtt GlueRole.Arn
+    GlueEndpoint:
+      Type: AWS::Glue::DevEndpoint
+      Properties:
+        EndpointName: masterbuilderdev
+        PublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDv8mv8eooHnf8j6YMDMXc+gsL48yqFJZRnKldE7GHB3g0VQQOK2od9ka7u5lS7K9xLMfsLkm/d1G62D+bVGuDH/QLEksbrnQXzOJ9teGniit0ND2ujCAAgbQhSBpDEy9VyOU4FUTNVXBSht+d+Wdo8Dek8lAm2y6SnbKLRGa97Us2pa4HcEHYkDPm4hebyjng19mUDI9AiOQ5eOI0Z1O8/gTQiqDdEkHonykZtE6mJarJeMUYqj84LFAc12fP0y2T02muN4iBfYJa7bac9xBqwabNj1QOtJKeep3qaY0QIlZQ/rw8CGmYBa1/MaoMLD6yMSNwmbBJeRkWVSR9x5Gt manos"
+        RoleArn: !GetAtt GlueRole.Arn
 
     GlueConnection:
       Type: AWS::Glue::Connection

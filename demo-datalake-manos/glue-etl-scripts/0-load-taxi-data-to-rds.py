@@ -37,5 +37,5 @@ dropnullfields3 = DropNullFields.apply(frame = resolvechoice2, transformation_ct
 ## @args: [catalog_connection = "RDS", connection_options = {"dbtable": "taxi-raw-data", "database": "octank"}, transformation_ctx = "datasink4"]
 ## @return: datasink4
 ## @inputs: [frame = dropnullfields3]
-datasink4 = glueContext.write_dynamic_frame.from_jdbc_conf(frame = dropnullfields3, catalog_connection = "RDS", connection_options = {"dbtable": "trips", "database": "octank"}, transformation_ctx = "datasink4")
+datasink4 = glueContext.write_dynamic_frame.from_jdbc_conf(frame = dropnullfields3, catalog_connection = "RDS", connection_options = {"dbtable": "taxi", "database": "octank"}, transformation_ctx = "datasink4")
 job.commit()
