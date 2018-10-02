@@ -1,7 +1,7 @@
 
 Description:
 
-    This template deploys the demo data lake for Octank Analytics. Starting from the network, it creates a pair of public and private subnets spread
+    This template deploys the demo data lake for Analytics. Starting from the network, it creates a pair of public and private subnets spread
     across two Availability Zones. It deploys an Internet Gateway, with a default route on the public subnets. It deploys a pair of NAT Gateways (one in each AZ),
     and default routes for them in the private subnets. It creates an RDS instance and a Redshift Cluster
 
@@ -24,6 +24,7 @@ Metadata:
           - RedshiftDatabaseName
           - RedshiftMasterUser
           - RedshiftMasterPassword
+          - KinesisFirehoseStreamName
       -
         Label:
           default: "Network Configuration"
@@ -81,7 +82,10 @@ Parameters:
       MaxLength: 41
       ConstraintDescription : must contain only alphanumeric characters with minimum of 8 characters.
 
-
+    KinesisFirehoseStreamName:
+      Description: Name of the Kinesis Delivery stream
+      Type: String
+      Default: octank
 
     VpcCIDR:
         Description: Please enter the IP range (CIDR notation) for this VPC
@@ -109,6 +113,36 @@ Parameters:
         Default: 10.0.4.0/24
 
 Resources:
+
+    AWSAdmins:
+        Type: AWS::IAM::Group
+        Properties:
+          GroupName: AWSAdmins
+          ManagedPolicyArns: [ "arn:aws:iam::aws:policy/AdministratorAccess" ]
+
+    DataScientists:
+        Type: AWS::IAM::Group
+        Properties:
+          GroupName: DataScientists
+          ManagedPolicyArns: [ "arn:aws:iam::aws:policy/job-function/DataScientist" ]
+
+    SystemAdmins:
+        Type: AWS::IAM::Group
+        Properties:
+          GroupName: SystemAdmins
+          ManagedPolicyArns: [ "arn:aws:iam::aws:policy/job-function/SystemAdministrator" ]
+
+    NetworkAdmins:
+        Type: AWS::IAM::Group
+        Properties:
+          GroupName: NetworkAdmins
+          ManagedPolicyArns: [ "arn:aws:iam::aws:policy/job-function/NetworkAdministrator" ]
+
+    DatabaseAdmins:
+        Type: AWS::IAM::Group
+        Properties:
+          GroupName: DatabaseAdmins
+          ManagedPolicyArns: [ "arn:aws:iam::aws:policy/job-function/DatabaseAdministrator" ]
 
     VPC:
         Type: AWS::EC2::VPC
@@ -457,7 +491,7 @@ Resources:
       Properties:
         DatabaseInput:
           Name: datalake-raw
-          Description: Raw data as they arrive in the Octank Datalake
+          Description: Raw data as they arrive in the Datalake
         CatalogId: !Ref AWS::AccountId
 
     RDSGlueDatabase:
@@ -473,7 +507,7 @@ Resources:
       Properties:
         DatabaseInput:
           Name: datalake-processed
-          Description: Proccessed Data in the Octank Datalake
+          Description: Proccessed Data in the Datalake
         CatalogId: !Ref AWS::AccountId
 
     RedshiftDataWarehouseGlueDatabase:
@@ -610,29 +644,19 @@ Resources:
                 - "arn:aws:s3:::awsglue-datasets/*"
                 Effect: Allow
 
-    # LoadDBJob:
-    #   Type: AWS::Glue::Job
-    #   Properties:
-    #     Role: !Ref GlueRole
-    #     DefaultArguments:
-    #       "--scriptLocation": "s3://manos-glue-development-scripts/0-load-taxi-data-to-rds.py"
-    #     MaxRetries: 0
-    #     Commands: ""
-    #     Description: Initial job to load test data to RDS database
-    #     Name: load-rds
-
-    LoadRDSGlueJob:
-      Type: "AWS::Glue::Job"
+    KinesisFirehose:
+      Type: AWS::KinesisFirehose::DeliveryStream
       Properties:
-        Role: !Ref GlueRole
-        AllocatedCapacity: 10
-        DefaultArguments:
-          "--job-bookmark-option": job-bookmark-enable
-        Command:
-          Name: glueetl
-          ScriptLocation: !Join [ "/", [ "s3:/", "manos-glue-development-scripts" , "0-load-taxi-data-to-rds.py" ] ]
-        Name: LoadRds
-
+          DeliveryStreamName: !Ref KinesisFirehoseStreamName
+          DeliveryStreamType: DirectPut
+          S3DestinationConfiguration:
+              BucketARN: !GetAtt S3DataLake.Arn
+              CompressionFormat: UNCOMPRESSED
+              Prefix: raw/streaming/
+              BufferingHints:
+                IntervalInSeconds: 60
+                SizeInMBs: 1
+              RoleARN: arn:aws:iam::663817732471:role/firehose_delivery_role
 
     DBManagementInstance:
       Type: AWS::EC2::Instance
