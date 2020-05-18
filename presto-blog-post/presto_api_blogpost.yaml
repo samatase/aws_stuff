@@ -1,0 +1,560 @@
+
+---
+AWSTemplateFormatVersion: '2010-09-09'
+# Generate a few tables from the tpc-ds dataset in AWS Glue.
+# The metadata created in the Data Catalog points to the tpc ds public S3 bucket
+#
+# Parameters substituted in the Resources section
+# These parameters are names of the resources created in the Data Catalog
+Parameters:
+  CFNDatabaseName:
+    Type: String
+    Default: presto_api_blogpost
+  CFNTableName1:
+    Type: String
+    Default: sales_360
+
+# Resources to create metadata in the Data Catalog
+Resources:
+###
+# Create an AWS Glue database
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref CFNDatabaseName
+        Description: Database for the Presto API blogpost 
+###
+# Create an AWS Glue table
+  StoreSalesTable:
+    # Creating the table waits for the database to be created
+    DependsOn: GlueDatabase
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableInput:
+        Name: !Ref CFNTableName1
+        Description: Define the table for the Presto API blogpost
+        TableType: EXTERNAL_TABLE
+        Parameters: {
+    "classification": "parquet"
+  }
+        PartitionKeys:
+        # Data is partitioned by store city
+        - Name: s_city
+          Type: string
+        Parameters: {"parquet.compression":"TRUE"}
+
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+          
+
+
+  CFNPartitionSS:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Sunnyside
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Sunnyside
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionPV:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Pleasant Valley
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Pleasant Valley
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionA:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Antioch
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Antioch
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionMZ:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Mount Zion
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Mount Zion
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionPH:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Pleasant Hill
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Pleasant Hill
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionSH:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Spring Hill
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Spring Hill
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionRV:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Riverview
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Riverview
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionC:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Concord
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Concord
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
+
+  CFNPartitionH:
+    DependsOn: StoreSalesTable
+    Type: AWS::Glue::Partition
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref CFNDatabaseName
+      TableName: !Ref CFNTableName1
+      PartitionInput:
+        Values:
+         - Harmony
+        StorageDescriptor:
+          OutputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat
+          Columns:
+            - Name: ss_quanity
+              Type: bigint
+            - Name: ss_list_price
+              Type: double
+            - Name: ss_net_paid
+              Type: double
+            - Name: ss_customer_sk
+              Type: bigint
+            - Name: d_holiday
+              Type: string
+            - Name: d_weekend
+              Type: string
+            - Name: d_day_name
+              Type: string
+            - Name: s_company_name
+              Type: string
+            - Name: s_county
+              Type: string
+            - Name: s_zip
+              Type: bigint
+            - Name: c_first_name
+              Type: string
+            - Name: c_last_name
+              Type: string
+            - Name: c_birth_year
+              Type: bigint
+            - Name: c_birth_country
+              Type: string
+            - Name: c_login
+              Type: string
+            - Name: d_date_sk
+              Type: bigint
+          InputFormat: org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat
+          Location: s3://samatas/presto_blog/store_sales_360/s_city=Harmony
+          BucketColumns: ["d_date_sk"]
+          NumberOfBuckets: 3 
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe
